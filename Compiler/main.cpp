@@ -1,9 +1,11 @@
 #include<iostream>
 #include<string>
 #include"lexer.h"
+#include"parser.h"
 using namespace std;
 
 lexer mylexer;
+parser myparser;
 
 void printHelp()
 {
@@ -18,8 +20,20 @@ int main(int argc, char *argv[])
             if ("--help" == string(argv[1]))
             {
                 printHelp();
+                return 0;
             }
-            return 0;
+            else if ("-g" == string(argv[1]) || "--grammar" == string(argv[1])) 
+            {
+                if(myparser.buildGrammar())
+                {
+                    cout << "Is SLR grammar" << endl;
+                    return 0;
+                }
+                else
+                {
+                    return -2;
+                }
+            }
         case 3:
             if ("-l" == string(argv[1]) || "--lexer" == string(argv[1]))
             {
