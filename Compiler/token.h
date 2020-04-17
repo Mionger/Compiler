@@ -20,6 +20,8 @@ struct token
 {
     TOKEN_TYPE  t_type;
     string      t_value;
+    string      t_name;     /* 语义分析时符号 */
+    int         t_funpos;   /* 函数在全局表中的符号 */
 };
 
 #endif

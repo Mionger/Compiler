@@ -287,7 +287,7 @@ int lexer::openFiles(const string src_file)
 
     if(this->print_flag)
     {
-        this->printer.open("lexer_result.txt");
+        this->printer.open("result_lexer.txt");
         if(!this->scanner.is_open())
         {
             cout << "Fail to open the lexer result file" << endl;
@@ -302,7 +302,28 @@ int lexer::openFiles(const string src_file)
 token lexer::getTokenP()
 {
     token t = getTokenNP();
-    if(this->print_flag)
+    if (L_EOF == t.t_type)
+    {
+        t.t_name = "#";
+    }
+    else if(L_CINT==t.t_type)
+    {
+        t.t_name = "num";
+    }
+    else if (L_IDENTIFIER == t.t_type)
+    {
+        t.t_name = "identifier";
+    }
+    else if (L_TYPE == t.t_type || L_KEYWORD == t.t_type || L_BORDER == t.t_type || L_OPERATOR == t.t_type)
+    {
+        t.t_name = t.t_value;
+    }
+    else
+    {
+        t.t_name = "";
+    }
+
+    if (this->print_flag)
         printToken(t);
     return t;
 }

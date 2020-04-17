@@ -9,11 +9,13 @@
 #include"production.h"
 #include"item.h"
 #include"operation.h"
+#include"analyzer.h"
 
 class parser
 {
 private:
     bool print_flag;
+
     vector<grammar>                     p_grammar;
     vector<production>                  p_production;
     set<string>                         p_symbol;
@@ -22,7 +24,10 @@ private:
     set<item>                           p_item;
     vector<set<item> >                  p_normal;
     map<pair<int, string>,operation>    p_table;
-
+    stack<int>                          p_state_stack;
+    stack<string>                       p_symbol_stack;
+    vector<symbolinfo>                  p_ginfo_stack;
+    
     int isNonTerminal(const string symbol);/* 判断是否是非终结符 */
     set<string> getFirst(const vector<string> production);/* 获取产生式的first集 */
 
@@ -36,11 +41,24 @@ private:
     set<item> genClosure(const set<item> c);/* 生成某个闭包的闭包 */
     bool genNormal();/* 根据产生式，生成项目规范族集 */
 
+    bool printProduction();/* 打印产生式 */
+    bool printGrammar();/* 打印拓广文法 */
+    bool printFirst();/* 打印first集合 */
+    bool printFollow();/* 打印follow集合 */
+    bool printSymbol();/* 打印文法符号 */
+    bool printItem();/* 打印项目 */
+    bool printFamily();/* 打印项目规范族 */
+    bool printGoto();/* 打印移进规约表 */
+
 public:
     parser();
     ~parser();
 
+    analyzer                            p_analyzer;
+    lexer                               p_lexer;
+
     bool buildGrammar();/* 根据文法文件，建立文法 */
+    bool startParser(const string src_file);/* 开始语法分析（同步进行语义分析和中间代码生成） */
 };
 
 #endif

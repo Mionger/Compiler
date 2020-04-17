@@ -44,7 +44,17 @@ int main(int argc, char *argv[])
                 mylexer.startScanner();
                 return 0;
             }
-            break;
+            if ("-p" == string(argv[1]) || "--parser" == string(argv[1]))
+            {
+                
+                if (0 != myparser.p_lexer.openFiles(string(argv[2])))
+                {
+                    return -2;
+                }
+                myparser.buildGrammar();
+                myparser.startParser(string(argv[2]));
+                return 0;
+            }
         default:
             printHelp();
             return 0;
