@@ -120,9 +120,9 @@ void generator::createFtrame()
 void generator::setTime(int r_no)
 {
     int len = this->c_register.size();
-    for (int i = 0; i < len;i++)
+    for (int i = 0; i < len; i++)
     {
-        if(r_no==i)
+        if (r_no == i)
         {
             this->c_register[i].r_miss = 0;
         }
@@ -193,7 +193,7 @@ string generator::getAddr(const symbolpos &pos) const
         vector<symbol> &g_table = s_table[0].getTable();
         for (vector<symbol>::iterator it = g_table.begin(); it != g_table.end(); it++)
         {
-            if(FUNCTION==it->s_mode)
+            if (FUNCTION == it->s_mode)
             {
                 continue;
             }
@@ -203,14 +203,17 @@ string generator::getAddr(const symbolpos &pos) const
                 break;
             }
         }
-        result = to_string(gp_offset * 4) + result;
+        int temp = gp_offset * 4;
+        result = to_string(temp) + result;
+        // result = to_string(gp_offset * 4) + result;
     }
     /* 临时变量 */
     else if (1 == pos.t_pos)
     {
         result += "($gp)";
         int gp_offset = GLOBAL_INIT + pos.s_pos;
-        result = to_string(gf_offset * 4) + result;
+        int temp = gp_offset * 4;
+        result = to_string(temp) + result;
     }
     /* 局部变量、形参、返回值 */
     else
@@ -233,19 +236,22 @@ string generator::getAddr(const symbolpos &pos) const
         }
         else
         {
-            int p_num = func.s_pnum;
+            // int p_num = func.s_pnum;
             /* 形参 */
-            if(pos.s_pos<=func.s_pnum)
+            if (pos.s_pos <= func.s_pnum)
             {
-                result = "$(fp)";
+                result = "($fp)";
                 int fp_offset = -2 - func.s_pnum + pos.s_pos;
-                result = to_string(fp_offset * 4) + result;
+                int temp = fp_offset * 4;
+                result = to_string(temp) + result;
             }
+            /* 局部变量 */
             else
             {
-                result = "$(fp)";
-                int fp_offset = func.s_pnum + pos.s_pos;
-                result = to_string(fp_offset * 4) + result;
+                result = "($fp)";
+                int fp_offset = pos.s_pos - func.s_pnum;
+                int temp = fp_offset * 4;
+                result = to_string(temp) + result;
             }
         }
     }
@@ -271,6 +277,7 @@ void generator::loadReg(int r_no, symbolpos &pos)
 
     this->c_register[r_no].r_info = pos;
     this->c_register[r_no].r_possessed = true;
+    setTime(r_no);
 
     s.s_reg = r_no;
 
@@ -298,6 +305,7 @@ int generator::loadImm(const string &imm, const symbolpos &pos)
 
     this->c_register[r_no].r_info = pos;
     this->c_register[r_no].r_possessed = true;
+    setTime(r_no);
 
     return r_no;
 }
@@ -330,9 +338,6 @@ string generator::setArg(symbolpos pos)
 void generator::clearReg()
 {
     vector<table> &s_table = *this->c_table_ptr;
-    symbolpos n_pos;
-    n_pos.s_pos = -1;
-    n_pos.t_pos = -1;
     for (vector<reg>::iterator it = this->c_register.begin(); it != this->c_register.end(); it++)
     {
         if (false == it->r_possessed)
@@ -342,13 +347,15 @@ void generator::clearReg()
         s.s_reg = -1;
         it->r_possessed = false;
         it->r_miss = 0;
+        symbolpos n_pos;
+        n_pos.s_pos = -1;
+        n_pos.t_pos = -1;
         it->r_info = n_pos;
         
         if (TEMP == s.s_mode)
             continue;
         int r_no = it - this->c_register.begin();
-        string mem = getAddr(pos);
-        printInst(instruction("sw", this->c_register[r_no].r_name, mem, ""));
+        printInst(instruction("sw", this->c_register[r_no].r_name, getAddr(pos), ""));
     }
 
     return;
@@ -358,9 +365,6 @@ void generator::clearReg()
 void generator::resetReg()
 {
     vector<table> &s_table = *this->c_table_ptr;
-    symbolpos n_pos;
-    n_pos.s_pos = -1;
-    n_pos.t_pos = -1;
     for (vector<reg>::iterator it = this->c_register.begin(); it != this->c_register.end(); it++)
     {
         if (false == it->r_possessed)
@@ -370,6 +374,9 @@ void generator::resetReg()
         s.s_reg = -1;
         it->r_possessed = false;
         it->r_miss = 0;
+        symbolpos n_pos;
+        n_pos.s_pos = -1;
+        n_pos.t_pos = -1;
         it->r_info = n_pos;
     }
     return;

@@ -9,7 +9,7 @@ analyzer::analyzer()
     /* 临时变量表 */
     this->a_table.push_back(table(TEMP_TABLE, "temp_table"));
 
-    this->a_tprinter.open("temp.txt");
+    this->a_tprinter.open("result_temp.txt");
     if(!this->a_tprinter.is_open())
     {
         cout << "Fail to open temp file" << endl;
@@ -37,7 +37,7 @@ analyzer::~analyzer()
     if(this->a_printer.is_open())
         this->a_printer.close();
 
-    remove("temp.txt");
+    remove("result_temp.txt");
 }
 
 /* 创建新符号表 */
@@ -57,6 +57,7 @@ void analyzer::printQua(const qua &q)
         this->a_tprinter << q.no << " (" << q.op << ", " << q.arg1 << ", " << q.arg2 << ", " << q.result << ")" << endl;
     }
     /* 回填 */
+    else
     {
         this->a_qstack.push_back(q);
     }
@@ -66,8 +67,8 @@ void analyzer::printQua(const qua &q)
 /* 根据临时文件打印中间代码 */
 bool analyzer::printQua()
 {
-    this->a_printer.open("inter_code.txt");
-    if(!this->a_printer.is_open())
+    this->a_printer.open("result_inter.txt");
+    if (!this->a_printer.is_open())
     {
         cout << "Fail to open inter code file" << endl;
         return false;
@@ -76,7 +77,7 @@ bool analyzer::printQua()
     if(this->a_tprinter.is_open())
         this->a_tprinter.close();
 
-    this->a_treader.open("temp.txt");
+    this->a_treader.open("result_temp.txt");
     if(!this->a_treader.is_open())
     {
         cout << "Fail to open temp file" << endl;
@@ -141,6 +142,7 @@ bool analyzer::startAnalyze(vector<symbolinfo> &g_infostack, const production &p
     if("Const_value"==p.p_left)
     {
         symbolinfo s_info = g_infostack.back();
+
         symbolinfo c_info;
         c_info.s_name = p.p_left;
         c_info.s_value = s_info.s_value;
@@ -158,12 +160,11 @@ bool analyzer::startAnalyze(vector<symbolinfo> &g_infostack, const production &p
     else if ("Factor" == p.p_left && "Const_value" == p.p_right[0])
     {
         symbolinfo s_info = g_infostack.back();
-        symbolinfo c_info;
-        c_info.s_name = p.p_left;
-
         int s_pos = this->a_table[1].addSymbol(s_info.s_value);
         string s_name = this->a_table[1].getSymbolName(s_pos);
 
+        symbolinfo c_info;
+        c_info.s_name = p.p_left;
         c_info.s_value = s_name;
         c_info.s_pos = symbolpos(1, s_pos);
 
@@ -184,6 +185,7 @@ bool analyzer::startAnalyze(vector<symbolinfo> &g_infostack, const production &p
     else if("Factor" == p.p_left && "(" == p.p_right[0])
     {
         symbolinfo s_info = g_infostack[g_infostack.size() - 2];
+        
         symbolinfo c_info;
         c_info.s_name = p.p_left;
         c_info.s_value = this->a_table[s_info.s_pos.t_pos].getSymbolName(s_info.s_pos.s_pos);
@@ -207,7 +209,7 @@ bool analyzer::startAnalyze(vector<symbolinfo> &g_infostack, const production &p
         int id_layer = this->a_sstack.size() - 1;
         for (; id_layer >= 0; id_layer--)
         {
-            table s_table = this->a_table[this->a_sstack.back()];
+            table s_table = this->a_table[this->a_sstack[id_layer]];
             id_pos = s_table.findSymbol(s_id.s_value);
             if (-1 != id_pos)
                 break;
@@ -215,11 +217,11 @@ bool analyzer::startAnalyze(vector<symbolinfo> &g_infostack, const production &p
 
         if (-1 == id_pos)
         {
-            cout << "Something wrong with sematic analyze" << endl;
+            cout << "Sematic analyze error : \'" << s_id.s_value << "\' has not been defined" << endl;
             return false;
         }
 
-        s_id.s_pos.t_pos = this->a_sstack.back();
+        s_id.s_pos.t_pos = this->a_sstack[id_layer];
         s_id.s_pos.s_pos = id_pos;
 
         symbolinfo c_info;
@@ -327,11 +329,11 @@ bool analyzer::startAnalyze(vector<symbolinfo> &g_infostack, const production &p
         }
         else
         {
-            string a1_name = getArgName(s_factor.s_pos);
-            string a2_name = getArgName(s_factor_loop.s_pos);
+            string a1_name = getArgName(s_factor_loop.s_pos);
+            string a2_name = getArgName(s_factor.s_pos);
 
-            string t_a1_name = this->a_generator.setArg(s_factor.s_pos);
-            string t_a2_name = this->a_generator.setArg(s_factor_loop.s_pos);
+            string t_a1_name = this->a_generator.setArg(s_factor_loop.s_pos);
+            string t_a2_name = this->a_generator.setArg(s_factor.s_pos);
 
             c_info.s_value = s_factor_loop.s_value;
             c_info.s_pos = s_factor_loop.s_pos;
@@ -674,14 +676,14 @@ bool analyzer::startAnalyze(vector<symbolinfo> &g_infostack, const production &p
 
         if (-1 != cur_table.findSymbol(s_id.s_value))
         {
-            cout << "Error occured in sematic analyze" << endl;
+            cout << "Sematic analyze error : \'" << s_id.s_value << "\' has been defined" << endl;
             return false;
         }
 
         int s_pos_tmp = this->a_table[0].findSymbol(s_id.s_value);
         if (-1 != s_pos_tmp && FUNCTION == this->a_table[0].getSymbolMode(s_pos_tmp))
         {
-            cout << "Error occured in sematic analyze" << endl;
+            cout << "Sematic analyze error : \'" << s_id.s_value << "\' has been defined as function" << endl;
             return false;
         }
 
@@ -726,7 +728,7 @@ bool analyzer::startAnalyze(vector<symbolinfo> &g_infostack, const production &p
 
         if (-1 == id_pos)
         {
-            cout << "Error occured in sematic analyze" << endl;
+            cout << "Sematic analyze error : \'" << s_id.s_value << "\' has not been defined" << endl;
             return false;
         }
 
@@ -765,7 +767,7 @@ bool analyzer::startAnalyze(vector<symbolinfo> &g_infostack, const production &p
 
         if (-1 != this->a_table[0].findSymbol(s_id.s_value))
         {
-            cout << "Error occured in sematic analyze" << endl;
+            cout << "Sematic analyze error : \'" << s_id.s_value << "\' has been defined" << endl;
             return false;
         }
 
@@ -796,7 +798,7 @@ bool analyzer::startAnalyze(vector<symbolinfo> &g_infostack, const production &p
         }
         else
         {
-            cout << "Error occured in sematic analyze" << endl;
+            cout << "Invaild return type" << endl;
             return false;
         }
         n_variable.s_value = "";
@@ -830,6 +832,8 @@ bool analyzer::startAnalyze(vector<symbolinfo> &g_infostack, const production &p
 
         this->a_wnum = this->a_wfcnt.back();
         this->a_wfcnt.pop_back();
+
+        this->a_generator.clearReg();
 
         if("main"!=s_id.s_value)
         {
@@ -892,7 +896,7 @@ bool analyzer::startAnalyze(vector<symbolinfo> &g_infostack, const production &p
 
             if (-1 != id_pos)
             {
-                cout << "Error occured in sematic analyze" << endl;
+                cout << "Sematic analyze error : \'" << s_id.s_value << "\' has been defined" << endl;
                 return false;
             }
 
@@ -921,7 +925,7 @@ bool analyzer::startAnalyze(vector<symbolinfo> &g_infostack, const production &p
     {
         if (VOID != this->a_table[this->a_sstack.back()].getSymbolType(0))
         {
-            cout << "Error occured in sematic analyze" << endl;
+            cout << "Unexpected return type" << endl;
             return false;
         }
 
@@ -935,7 +939,7 @@ bool analyzer::startAnalyze(vector<symbolinfo> &g_infostack, const production &p
     {
         if (INT != this->a_table[this->a_sstack.back()].getSymbolType(0))
         {
-            cout << "Error occured in sematic analyze" << endl;
+            cout << "Unexpected return type" << endl;
             return false;
         }
 
@@ -1006,15 +1010,15 @@ bool analyzer::startAnalyze(vector<symbolinfo> &g_infostack, const production &p
 
         if (-1 != cur_table.findSymbol(s_id.s_value))
         {
-            cout << "Error occured in sematic analyze" << endl;
+            cout << "Sematic analyze error : a function has had the same parameter" << endl;
             return false;
         }
 
         int tmp_s_pos = this->a_table[0].findSymbol(s_id.s_value);
         if (-1 != tmp_s_pos && FUNCTION == this->a_table[0].getSymbolMode(tmp_s_pos))
         {
-            cout << "Error occured in sematic analyze" << endl;
-            return false;   
+            cout << "Sematic analyze error : \'" << s_id.s_value << "\' has been defined as a function" << endl;
+            return false;
         }
 
         symbol n_variable;
@@ -1157,12 +1161,12 @@ bool analyzer::startAnalyze(vector<symbolinfo> &g_infostack, const production &p
         this->a_generator.clearReg();
         string j_label_begin = this->a_jump.back();
         this->a_jump.pop_back();
-        this->a_generator.printInst(instruction("j" + j_label_begin, "", "", ""));
+        this->a_generator.printInst(instruction("j", j_label_begin, "", ""));
         string w_label_end = this->a_while.back();
         this->a_while.pop_back();
-        this->a_generator.printInst(instruction(w_label_end + ":", "", "", ""));
+        this->a_generator.printInst(instruction(w_label_end, ":", "", ""));
         this->a_generator.clearReg();
-        this->a_generator.printInst(instruction("", "", "", ""));
+        // this->a_generator.printInst(instruction("", "", "", ""));
 
         int len = 0;
         if ("$" != p.p_right[0])
@@ -1245,7 +1249,7 @@ bool analyzer::startAnalyze(vector<symbolinfo> &g_infostack, const production &p
 
         this->a_generator.clearReg();
         this->a_generator.printInst(instruction("j", j_label_else_end, "", ""));
-        this->a_generator.printInst(instruction(w_label_if_end + ":", "", "", ""));
+        this->a_generator.printInst(instruction(w_label_if_end, ":", "", ""));
 
         int len = 0;
         if ("$" != p.p_right[0])
@@ -1268,7 +1272,7 @@ bool analyzer::startAnalyze(vector<symbolinfo> &g_infostack, const production &p
         this->a_jump.pop_back();
 
         this->a_generator.clearReg();
-        this->a_generator.printInst(instruction(w_label_if_end + ":", "", "", ""));
+        this->a_generator.printInst(instruction(w_label_if_end, ":", "", ""));
 
         int len = 0;
         if ("$" != p.p_right[0])
@@ -1290,7 +1294,7 @@ bool analyzer::startAnalyze(vector<symbolinfo> &g_infostack, const production &p
         this->a_while.end();
 
         this->a_generator.clearReg();
-        this->a_generator.printInst(instruction(w_label_else_end + ":", "", "", ""));
+        this->a_generator.printInst(instruction(w_label_else_end, "：", "", ""));
 
         int len = 0;
         if ("$" != p.p_right[0])
@@ -1378,13 +1382,13 @@ bool analyzer::startAnalyze(vector<symbolinfo> &g_infostack, const production &p
 
         if (-1 == id_pos)
         {
-            cout << "Error occured in sematic analyze" << endl;
+            cout << "Sematic analyze error : \'" << s_id.s_value << "\' has not been defined" << endl;
             return false;
         }
 
         if (FUNCTION != this->a_table[this->a_sstack[id_layer]].getSymbolMode(id_pos))
         {
-            cout << "Error occured in sematic analyze" << endl;
+            cout << "Sematic analyze error : " << s_id.s_value << " is not a function" << endl;
             return false;
         }
 
@@ -1428,7 +1432,7 @@ bool analyzer::startAnalyze(vector<symbolinfo> &g_infostack, const production &p
         int p_pnum = stoi(s_expression_loop.s_value);
         if (p_pnum >= pnum)
         {
-            cout << "Error occured in sematic analyze" << endl;
+            cout << "Sematic analyze error : \'" << func.s_name << "\' with too many parameters" << endl;
             return false;
         }
 
@@ -1472,7 +1476,7 @@ bool analyzer::startAnalyze(vector<symbolinfo> &g_infostack, const production &p
         int p_pnum = stoi(s_expression_loop.s_value);
         if (p_pnum >= pnum)
         {
-            cout << "Error occured in sematic analyze" << endl;
+            cout << "Sematic analyze error : \'" << func.s_name << "\' with too many parameters" << endl;
             return false;
         }
 
@@ -1490,7 +1494,7 @@ bool analyzer::startAnalyze(vector<symbolinfo> &g_infostack, const production &p
 
         if (p_pnum < pnum)
         {
-            cout << "Error occured in sematic analyze" << endl;
+            cout << "Sematic analyze error : \'" << func.s_name << "\' with missing parameter" << endl;
             return false;
         }
 
@@ -1518,7 +1522,7 @@ bool analyzer::startAnalyze(vector<symbolinfo> &g_infostack, const production &p
         int pnum = func.s_pnum;
         if (0 != pnum)
         {
-            cout << "Error occured in sematic analyze" << endl;
+            cout << "Sematic analyze error : \'" << func.s_name << "\' with missing parameter" << endl;
             return false;
         }
 
@@ -1577,9 +1581,11 @@ bool analyzer::startAnalyze(vector<symbolinfo> &g_infostack, const production &p
     {
         if (-1 == this->main_no)
         {
-            cout << "Error occured in sematic analyze" << endl;
+            cout << "Sematic analyze error : lack of main function" << endl;
             return false;
         }
+
+        printQua();
 
         symbolinfo c_info;
         c_info.s_name = p.p_left;
